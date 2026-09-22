@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const statsStorage = require('../utils/statsStorage');
 
-// In-memory active client sessions: Map<string, number> (clientId -> lastSeenTimestamp)
+// In-memory active Roblox client sessions: Map<string, number> (clientId -> lastSeenTimestamp)
 const activeClients = new Map();
 const ACTIVE_TIMEOUT_MS = 25000; // 25 seconds rolling window
 
@@ -14,12 +14,23 @@ function getActiveCount() {
       activeClients.delete(id);
     }
   }
-  return Math.max(activeClients.size, 1); // Minimum 1 active when viewed or running
+  return activeClients.size;
 }
 
-function touchClient(clientId, isInit = false) {
-  if (!clientId) return;
-  activeClients.set(clientId, Date.now());
+function touchClient(req, isInit = false) {
+  // Only register actual Roblox game clients
+  const src = req.query?.src || req.headers?.['x-infinity-source'];
+  const cid = req.query?.cid || req.headers?.['x-client-id'] || req.body?.cid;
+  const ua = (req.headers?.['user-agent'] || '').toLowerCase();
+
+  const isRoblox = src === 'roblox' || ua.includes('roblox') || ua.includes('synapse') || ua.includes('fluxus');
+
+  if (!isRoblox || !cid) {
+    return; // Ignore regular web browser visits, curl, and Render health checks
+  }
+
+  activeClients.set(String(cid), Date.now());
+
   if (isInit) {
     statsStorage.recordExecution();
   }
@@ -50,15 +61,13 @@ router.get('/', (req, res) => {
 
 /**
  * GET/POST /api/stats/ping
- * Heartbeat & injection counter endpoint called by Roblox clients
+ * Heartbeat & injection counter endpoint called exclusively by Roblox scripts
  */
 const handlePing = (req, res) => {
   try {
-    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
-    const clientId = req.query.cid || req.body?.cid || req.headers['x-client-id'] || ip;
     const isInit = req.query.init === '1' || req.body?.init === true || req.headers['x-infinity-init'] === '1';
 
-    touchClient(clientId, isInit);
+    touchClient(req, isInit);
 
     const stats = statsStorage.getStats();
     const activeNow = getActiveCount();

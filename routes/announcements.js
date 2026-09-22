@@ -38,9 +38,7 @@ function requireAdmin(req, res, next) {
  */
 router.get('/latest', (req, res) => {
   try {
-    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
-    const clientId = req.query.cid || req.headers['x-client-id'] || ip;
-    touchClient(clientId);
+    touchClient(req);
 
     const list = storage.getAnnouncements();
     // Filter active announcements, sorted by createdAt descending or highest ID

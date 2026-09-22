@@ -13,11 +13,11 @@ function ensureStatsFile() {
     const today = new Date().toISOString().slice(0, 10);
     const month = today.slice(0, 7);
     const defaultData = {
-      allTime: 1250,
+      allTime: 1,
       monthDate: month,
-      monthCount: 820,
+      monthCount: 1,
       todayDate: today,
-      todayCount: 145,
+      todayCount: 1,
       lastUpdated: new Date().toISOString()
     };
     fs.writeFileSync(STATS_FILE, JSON.stringify(defaultData, null, 2), 'utf-8');
