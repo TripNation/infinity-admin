@@ -54,11 +54,11 @@ function getStats() {
   } catch (err) {
     console.error('[statsStorage] Error reading stats:', err);
     return {
-      allTime: 1250,
+      allTime: 0,
       monthDate: new Date().toISOString().slice(0, 7),
-      monthCount: 820,
+      monthCount: 0,
       todayDate: new Date().toISOString().slice(0, 10),
-      todayCount: 145,
+      todayCount: 0,
       lastUpdated: new Date().toISOString()
     };
   }

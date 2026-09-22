@@ -2,34 +2,60 @@ const express = require('express');
 const router = express.Router();
 const statsStorage = require('../utils/statsStorage');
 
-// In-memory active Roblox client sessions: Map<string, number> (clientId -> lastSeenTimestamp)
+// In-memory active Roblox client sessions: Map<string, { lastSeen: number, username: string, game: string }>
 const activeClients = new Map();
-const ACTIVE_TIMEOUT_MS = 25000; // 25 seconds rolling window
+const ACTIVE_TIMEOUT_MS = 10000; // 10 seconds rolling window (polls every 4s)
 
-// Helper to clean up expired sessions
-function getActiveCount() {
+function getActiveUsers() {
   const now = Date.now();
-  for (const [id, lastSeen] of activeClients.entries()) {
-    if (now - lastSeen > ACTIVE_TIMEOUT_MS) {
+  const list = [];
+  for (const [id, data] of activeClients.entries()) {
+    if (now - data.lastSeen > ACTIVE_TIMEOUT_MS) {
       activeClients.delete(id);
+    } else {
+      list.push({
+        id,
+        username: data.username || 'Roblox Player',
+        game: data.game || 'Infinity Hub'
+      });
     }
   }
-  return activeClients.size;
+  return list;
 }
 
 function touchClient(req, isInit = false) {
-  // Only register actual Roblox game clients
   const src = req.query?.src || req.headers?.['x-infinity-source'];
   const cid = req.query?.cid || req.headers?.['x-client-id'] || req.body?.cid;
-  const ua = (req.headers?.['user-agent'] || '').toLowerCase();
+  const isLeave = req.query?.leave === '1' || req.body?.leave === true || req.headers?.['x-infinity-leave'] === '1';
 
+  if (isLeave && cid) {
+    activeClients.delete(String(cid));
+    return;
+  }
+
+  const ua = (req.headers?.['user-agent'] || '').toLowerCase();
   const isRoblox = src === 'roblox' || ua.includes('roblox') || ua.includes('synapse') || ua.includes('fluxus');
 
   if (!isRoblox || !cid) {
     return; // Ignore regular web browser visits, curl, and Render health checks
   }
 
-  activeClients.set(String(cid), Date.now());
+  const existing = activeClients.get(String(cid));
+  const rawUser = req.query?.user || req.body?.user;
+  const rawGame = req.query?.game || req.body?.game;
+
+  const username = (rawUser && rawUser !== 'undefined' && rawUser !== 'null') 
+    ? rawUser 
+    : (existing ? existing.username : 'Roblox Player');
+  const game = (rawGame && rawGame !== 'undefined' && rawGame !== 'null') 
+    ? rawGame 
+    : (existing ? existing.game : 'Infinity Hub');
+
+  activeClients.set(String(cid), {
+    lastSeen: Date.now(),
+    username: String(username),
+    game: String(game)
+  });
 
   if (isInit) {
     statsStorage.recordExecution();
@@ -43,11 +69,16 @@ function touchClient(req, isInit = false) {
 router.get('/', (req, res) => {
   try {
     const stats = statsStorage.getStats();
-    const activeNow = getActiveCount();
+    const activeUsers = getActiveUsers();
+
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
 
     return res.status(200).json({
       success: true,
-      activeNow,
+      activeNow: activeUsers.length,
+      activeUsers,
       executionsToday: stats.todayCount,
       thisMonth: stats.monthCount,
       allTime: stats.allTime,
@@ -61,7 +92,7 @@ router.get('/', (req, res) => {
 
 /**
  * GET/POST /api/stats/ping
- * Heartbeat & injection counter endpoint called exclusively by Roblox scripts
+ * Heartbeat, injection counter & player leave endpoint called exclusively by Roblox scripts
  */
 const handlePing = (req, res) => {
   try {
@@ -70,11 +101,16 @@ const handlePing = (req, res) => {
     touchClient(req, isInit);
 
     const stats = statsStorage.getStats();
-    const activeNow = getActiveCount();
+    const activeUsers = getActiveUsers();
+
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
 
     return res.status(200).json({
       success: true,
-      activeNow,
+      activeNow: activeUsers.length,
+      activeUsers,
       executionsToday: stats.todayCount,
       thisMonth: stats.monthCount,
       allTime: stats.allTime
@@ -91,5 +127,5 @@ router.post('/ping', handlePing);
 module.exports = {
   router,
   touchClient,
-  getActiveCount
+  getActiveUsers
 };

@@ -58,6 +58,7 @@ const statExecutionsToday = document.getElementById('statExecutionsToday');
 const statThisMonth = document.getElementById('statThisMonth');
 const statAllTime = document.getElementById('statAllTime');
 const telemetryUpdatedText = document.getElementById('telemetryUpdatedText');
+const activeUsersList = document.getElementById('activeUsersList');
 
 // History Table
 const historyTableBody = document.getElementById('historyTableBody');
@@ -88,14 +89,29 @@ function formatNumber(num) {
 
 async function fetchTelemetryStats(manual = false) {
   try {
-    const res = await fetch('/api/stats');
+    const res = await fetch('/api/stats?_t=' + Date.now());
     if (!res.ok) throw new Error('Stats request failed');
     const data = await res.json();
 
-    if (statActiveNow) statActiveNow.textContent = formatNumber(data.activeNow || 1);
-    if (statExecutionsToday) statExecutionsToday.textContent = formatNumber(data.executionsToday || 0);
-    if (statThisMonth) statThisMonth.textContent = formatNumber(data.thisMonth || 0);
-    if (statAllTime) statAllTime.textContent = formatNumber(data.allTime || 0);
+    const activeCount = typeof data.activeNow === 'number' ? data.activeNow : 0;
+    if (statActiveNow) statActiveNow.textContent = formatNumber(activeCount);
+    if (statExecutionsToday) statExecutionsToday.textContent = formatNumber(data.executionsToday ?? 0);
+    if (statThisMonth) statThisMonth.textContent = formatNumber(data.thisMonth ?? 0);
+    if (statAllTime) statAllTime.textContent = formatNumber(data.allTime ?? 0);
+
+    if (activeUsersList) {
+      if (Array.isArray(data.activeUsers) && data.activeUsers.length > 0) {
+        activeUsersList.innerHTML = data.activeUsers.map(u => `
+          <div class="active-user-badge" title="Roblox ID: ${escapeHtml(u.id)}">
+            <span class="user-live-dot"></span>
+            <span class="user-badge-name">${escapeHtml(u.username)}</span>
+            <span class="user-badge-game">${escapeHtml(u.game)}</span>
+          </div>
+        `).join('');
+      } else {
+        activeUsersList.innerHTML = `<span class="active-users-none">No active players</span>`;
+      }
+    }
 
     if (telemetryUpdatedText) {
       const now = new Date();
