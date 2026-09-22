@@ -2,25 +2,28 @@ const express = require('express');
 const router = express.Router();
 const statsStorage = require('../utils/statsStorage');
 
-// In-memory active Roblox client sessions: Map<string, { lastSeen: number, username: string, game: string }>
+// In-memory active Roblox client sessions: Map<string, number> (clientId -> lastSeenTimestamp)
 const activeClients = new Map();
 const ACTIVE_TIMEOUT_MS = 10000; // 10 seconds rolling window (polls every 4s)
 
-function getActiveUsers() {
+// Debounce map to prevent duplicate execution counts from the same injection (loader + game script + retries)
+const recentInjections = new Map(); // Map<string, number> (clientId -> lastRecordedTimestamp)
+const INJECTION_DEBOUNCE_MS = 60000; // 60 seconds debounce window per player/client ID
+
+function getActiveCount() {
   const now = Date.now();
-  const list = [];
-  for (const [id, data] of activeClients.entries()) {
-    if (now - data.lastSeen > ACTIVE_TIMEOUT_MS) {
+  for (const [id, lastSeen] of activeClients.entries()) {
+    if (now - lastSeen > ACTIVE_TIMEOUT_MS) {
       activeClients.delete(id);
-    } else {
-      list.push({
-        id,
-        username: data.username || 'Roblox Player',
-        game: data.game || 'Infinity Hub'
-      });
     }
   }
-  return list;
+  // Clean up debounce cache older than 10 minutes
+  for (const [id, time] of recentInjections.entries()) {
+    if (now - time > 600000) {
+      recentInjections.delete(id);
+    }
+  }
+  return activeClients.size;
 }
 
 function touchClient(req, isInit = false) {
@@ -40,36 +43,27 @@ function touchClient(req, isInit = false) {
     return; // Ignore regular web browser visits, curl, and Render health checks
   }
 
-  const existing = activeClients.get(String(cid));
-  const rawUser = req.query?.user || req.body?.user;
-  const rawGame = req.query?.game || req.body?.game;
-
-  const username = (rawUser && rawUser !== 'undefined' && rawUser !== 'null') 
-    ? rawUser 
-    : (existing ? existing.username : 'Roblox Player');
-  const game = (rawGame && rawGame !== 'undefined' && rawGame !== 'null') 
-    ? rawGame 
-    : (existing ? existing.game : 'Infinity Hub');
-
-  activeClients.set(String(cid), {
-    lastSeen: Date.now(),
-    username: String(username),
-    game: String(game)
-  });
+  activeClients.set(String(cid), Date.now());
 
   if (isInit) {
-    statsStorage.recordExecution();
+    const lastInit = recentInjections.get(String(cid)) || 0;
+    const now = Date.now();
+    // Only increment execution count ONCE per client per 60 seconds
+    if (now - lastInit > INJECTION_DEBOUNCE_MS) {
+      recentInjections.set(String(cid), now);
+      statsStorage.recordExecution();
+    }
   }
 }
 
 /**
  * GET /api/stats
- * Public endpoint returning current active players and execution statistics
+ * Public endpoint returning current active players count and execution statistics
  */
 router.get('/', (req, res) => {
   try {
     const stats = statsStorage.getStats();
-    const activeUsers = getActiveUsers();
+    const activeNow = getActiveCount();
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -77,8 +71,7 @@ router.get('/', (req, res) => {
 
     return res.status(200).json({
       success: true,
-      activeNow: activeUsers.length,
-      activeUsers,
+      activeNow,
       executionsToday: stats.todayCount,
       thisMonth: stats.monthCount,
       allTime: stats.allTime,
@@ -101,7 +94,7 @@ const handlePing = (req, res) => {
     touchClient(req, isInit);
 
     const stats = statsStorage.getStats();
-    const activeUsers = getActiveUsers();
+    const activeNow = getActiveCount();
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
@@ -109,8 +102,7 @@ const handlePing = (req, res) => {
 
     return res.status(200).json({
       success: true,
-      activeNow: activeUsers.length,
-      activeUsers,
+      activeNow,
       executionsToday: stats.todayCount,
       thisMonth: stats.monthCount,
       allTime: stats.allTime
@@ -127,5 +119,5 @@ router.post('/ping', handlePing);
 module.exports = {
   router,
   touchClient,
-  getActiveUsers
+  getActiveCount
 };

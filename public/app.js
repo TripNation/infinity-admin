@@ -58,7 +58,6 @@ const statExecutionsToday = document.getElementById('statExecutionsToday');
 const statThisMonth = document.getElementById('statThisMonth');
 const statAllTime = document.getElementById('statAllTime');
 const telemetryUpdatedText = document.getElementById('telemetryUpdatedText');
-const activeUsersList = document.getElementById('activeUsersList');
 
 // History Table
 const historyTableBody = document.getElementById('historyTableBody');
@@ -98,20 +97,6 @@ async function fetchTelemetryStats(manual = false) {
     if (statExecutionsToday) statExecutionsToday.textContent = formatNumber(data.executionsToday ?? 0);
     if (statThisMonth) statThisMonth.textContent = formatNumber(data.thisMonth ?? 0);
     if (statAllTime) statAllTime.textContent = formatNumber(data.allTime ?? 0);
-
-    if (activeUsersList) {
-      if (Array.isArray(data.activeUsers) && data.activeUsers.length > 0) {
-        activeUsersList.innerHTML = data.activeUsers.map(u => `
-          <div class="active-user-badge" title="Roblox ID: ${escapeHtml(u.id)}">
-            <span class="user-live-dot"></span>
-            <span class="user-badge-name">${escapeHtml(u.username)}</span>
-            <span class="user-badge-game">${escapeHtml(u.game)}</span>
-          </div>
-        `).join('');
-      } else {
-        activeUsersList.innerHTML = `<span class="active-users-none">No active players</span>`;
-      }
-    }
 
     if (telemetryUpdatedText) {
       const now = new Date();
