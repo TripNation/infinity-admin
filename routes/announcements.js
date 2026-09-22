@@ -132,6 +132,9 @@ router.post('/', requireAdmin, (req, res) => {
     };
 
     const list = storage.getAnnouncements();
+    if (newAnnouncement.active) {
+      list.forEach(a => { a.active = false; });
+    }
     list.push(newAnnouncement);
     const saved = storage.saveAnnouncements(list);
 
