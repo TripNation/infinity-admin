@@ -8,7 +8,7 @@ const storage = require('../utils/storage');
  */
 router.post('/verify', (req, res) => {
   const { password } = req.body;
-  const adminPassword = process.env.ADMIN_PASSWORD || 'infinityadmin123';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'InfinityX9!';
 
   if (!password || password !== adminPassword) {
     return res.status(401).json({

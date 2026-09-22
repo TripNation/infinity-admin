@@ -8,6 +8,6 @@ services:
     startCommand: npm start
     envVars:
       - key: ADMIN_PASSWORD
-        value: infinityadmin123
+        value: InfinityX9!
       - key: PUBLIC_BASE_URL
         value: https://www.infinityhub.space
