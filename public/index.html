@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infinity Hub — Live Announcement Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Background Glow Effects -->
+  <div class="glow-orb orb-purple"></div>
+  <div class="glow-orb orb-blue"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="hub-header">
+      <div class="header-branding">
+        <div class="hub-logo-badge">
+          <svg class="infinity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.74-8z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="hub-title">INFINITY HUB</h1>
+          <p class="hub-subtitle">LIVE ANNOUNCEMENT ADMIN</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="authStatusBadge" class="auth-badge auth-locked" onclick="openAuthModal()">
+          <span class="auth-dot"></span>
+          <span id="authStatusText">Admin Key Required</span>
+        </div>
+        <button id="logoutBtn" class="btn-ghost btn-sm" onclick="logoutAdmin()" style="display:none;" title="Clear saved admin session">Logout</button>
+      </div>
+    </header>
+
+    <!-- Top Status Section -->
+    <section class="status-grid">
+      <div class="status-card">
+        <div class="status-card-header">
+          <span class="status-label">SERVER STATUS</span>
+          <span id="apiStatusPill" class="pill pill-green">
+            <span class="pill-dot pulse"></span>
+            <span id="apiStatusText">Checking...</span>
+          </span>
+        </div>
+        <div class="status-value-row">
+          <div class="status-metric">
+            <span class="metric-title">API</span>
+            <span id="serverModeText" class="metric-val">Online</span>
+          </div>
+          <div class="status-metric">
+            <span class="metric-title">Latest Announcement</span>
+            <span id="latestIdBadge" class="metric-val text-accent">ID --</span>
+          </div>
+          <div class="status-metric">
+            <span class="metric-title">Clients</span>
+            <span id="clientModeBadge" class="metric-val">Local development mode</span>
+          </div>
+        </div>
+        <div class="status-card-footer">
+          <div class="api-url-box">
+            <span class="url-label">ENDPOINT:</span>
+            <code id="apiUrlDisplay">http://localhost:3000/api/announcements/latest</code>
+          </div>
+          <button id="copyUrlBtn" class="btn-copy" onclick="copyApiUrl()">
+            <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>COPY API URL</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace: Form & Live Preview -->
+    <div class="main-layout">
+      <!-- Left: Announcement Creator Form -->
+      <section class="panel form-panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <div class="panel-icon-wrap icon-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 id="formHeading">Create Announcement</h2>
+              <p class="panel-sub">Broadcast messages to connected Infinity Hub players</p>
+            </div>
+          </div>
+          <span id="editingIndicator" class="pill pill-warning" style="display: none;">
+            Editing #<span id="editingIdText"></span>
+          </span>
+        </div>
+
+        <form id="announcementForm" onsubmit="handleFormSubmit(event)">
+          <input type="hidden" id="editAnnouncementId" value="">
+
+
+          <!-- Announcement Message -->
+          <div class="form-group">
+            <label for="announcementMessage" class="form-label">
+              Announcement Message <span class="required">*</span>
+            </label>
+            <textarea 
+              id="announcementMessage" 
+              class="form-textarea" 
+              rows="3" 
+              placeholder="e.g. New update releasing tonight! Join our Discord for patch notes." 
+              required
+              maxlength="300"
+            ></textarea>
+            <div class="char-count"><span id="charCount">0</span>/300</div>
+          </div>
+
+          <!-- Announcement Type & Duration in Grid -->
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="announcementType" class="form-label">Announcement Type</label>
+              <select id="announcementType" class="form-select">
+                <option value="announcement">Announcement</option>
+                <option value="update" selected>Update</option>
+                <option value="important">Important</option>
+                <option value="warning">Warning</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="new script">New Script</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="announcementDuration" class="form-label">Duration</label>
+              <select id="announcementDuration" class="form-select">
+                <option value="5">5 seconds</option>
+                <option value="10">10 seconds</option>
+                <option value="15" selected>15 seconds</option>
+                <option value="30">30 seconds</option>
+                <option value="persistent">Persistent</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Target Game / Script Selection -->
+          <div class="form-group">
+            <label for="gameSelection" class="form-label">
+              Target Game / Script <span class="required">*</span>
+            </label>
+            <select id="gameSelection" class="form-select" onchange="handleGameSelectChange()">
+              <option value="all" selected>All (Whole Hub &amp; Everyone)</option>
+              <option value="Ride A Pet">Ride A Pet</option>
+              <option value="Escape Tsunami For Brainrots">Escape Tsunami For Brainrots</option>
+              <option value="custom">Custom Game / Script...</option>
+            </select>
+            <span class="field-hint" id="gameTargetHint">Sends this announcement to every player connected to the hub.</span>
+          </div>
+
+          <!-- Custom Game Input (Only shown if 'Custom Game' is selected) -->
+          <div class="form-group" id="customGameGroup" style="display: none;">
+            <label for="customGameInput" class="form-label">
+              Custom Game Name or Script
+            </label>
+            <input 
+              type="text" 
+              id="customGameInput" 
+              class="form-input" 
+              placeholder="e.g. Prison Life or Blade Ball"
+              autocomplete="off"
+              oninput="handleCustomGameInput()"
+            >
+            <span class="field-hint">Target players running this specific game.</span>
+          </div>
+
+
+          <!-- Buttons Bar -->
+          <div class="form-actions">
+            <button type="submit" id="submitBtn" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+              <span id="submitBtnText">SEND ANNOUNCEMENT</span>
+            </button>
+
+            <button type="button" class="btn btn-secondary" onclick="scrollToPreview()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span>PREVIEW</span>
+            </button>
+
+            <button type="button" class="btn btn-ghost" onclick="resetForm()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                <path d="M3 3v5h5"></path>
+              </svg>
+              <span>CLEAR</span>
+            </button>
+
+            <button type="button" class="btn btn-test" onclick="sendTestAnnouncement()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>SEND TEST ANNOUNCEMENT</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right: Live Preview Panel -->
+      <section class="panel preview-panel" id="previewSection">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <div class="panel-icon-wrap icon-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <div>
+              <h2>LIVE PREVIEW</h2>
+              <p class="panel-sub">Simulated client notification popup inside Infinity Hub</p>
+            </div>
+          </div>
+          <span class="live-tag"><span class="pill-dot pulse"></span> Realtime</span>
+        </div>
+
+        <div class="preview-stage">
+          <div class="preview-backdrop-mock">
+            <div class="mock-roblox-header">
+              <div class="mock-dot-group">
+                <span class="mock-dot red"></span>
+                <span class="mock-dot yellow"></span>
+                <span class="mock-dot green"></span>
+              </div>
+              <span class="mock-screen-title">Roblox Client / Infinity Hub Viewport</span>
+              <span class="mock-fps">FPS: 60</span>
+            </div>
+
+            <!-- The Simulated Infinity Hub Announcement Card (Matching In-Game Design) -->
+            <div class="infinity-popup-card-v2" id="popupCard">
+              <div class="popup-v2-main">
+                <div class="popup-v2-logo-holder">
+                  <img src="infinity_logo.png" alt="Infinity Logo" class="popup-v2-logo-img">
+                </div>
+                <div class="popup-v2-content">
+                  <div class="popup-v2-header">Infinity Announcements</div>
+                  <div class="popup-v2-message" id="previewMessage">SENA ABUSE LOLLL</div>
+                </div>
+                <button type="button" class="popup-v2-dismiss" onclick="simulateDismiss()" title="Dismiss">✕</button>
+              </div>
+
+              <!-- Bottom Duration Progress Bar Track -->
+              <div class="popup-v2-progress-track">
+                <div class="popup-v2-progress-fill" id="popupProgressFill"></div>
+              </div>
+            </div>
+
+
+            <div class="preview-note">
+              <span>💡 Updates dynamically as you type in the form above.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Announcement History Section -->
+    <section class="panel history-panel">
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <div class="panel-icon-wrap icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h2>ANNOUNCEMENT HISTORY</h2>
+            <p class="panel-sub">Manage past and active live announcements (newest first)</p>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAnnouncements()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th style="width: 70px;">ID</th>
+              <th>Message</th>
+              <th style="width: 150px;">Target Game</th>
+              <th style="width: 120px;">Type</th>
+              <th style="width: 140px;">Created At</th>
+              <th style="width: 100px;">Status</th>
+              <th style="width: 150px; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <tr>
+              <td colspan="7" class="empty-state">Loading announcements...</td>
+            </tr>
+          </tbody>
+
+        </table>
+      </div>
+    </section>
+
+    <!-- Client Connection & Integration Helper Section -->
+    <section class="panel client-info-panel">
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <div class="panel-icon-wrap icon-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h2>CLIENT CONNECTION &amp; LUA INTEGRATION</h2>
+            <p class="panel-sub">How your Infinity Hub client connects and polls for live announcements</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="client-info-content">
+        <div class="client-alert-warning">
+          <strong>⚠️ IMPORTANT LOCALHOST LIMITATION:</strong>
+          <code>localhost</code> only works from the same computer running this server. Other Infinity Hub users cannot access <code>http://localhost:3000</code> from their computers. For live announcements to users outside your network, deploy this server publicly (VPS, Railway, Render, etc.) and update <code>PUBLIC_BASE_URL</code> in <code>.env</code>.
+        </div>
+
+        <div class="code-preview-wrap">
+          <div class="code-preview-header">
+            <span>Infinity Hub Lua Integration Example</span>
+            <button class="btn-copy-code" onclick="copyLuaCode()">Copy Lua Snippet</button>
+          </div>
+          <pre><code id="luaSnippetBlock">-- =========================================================
+-- Infinity Hub Announcement Poller
+-- =========================================================
+local HttpService = game:GetService("HttpService")
+
+local InfinityConfig = {
+    ApiUrl = "http://localhost:3000/api/announcements/latest",
+    PollInterval = 15,
+    HubVersion = "2.1.0",
+    CurrentModule = "Ride A Pet",
+    DebugMode = true
+}
+
+local lastSeenAnnouncementId = nil
+
+-- Non-blocking announcement fetcher
+local function FetchLatestAnnouncement()
+    local ok, raw = pcall(function()
+        return game:HttpGet(InfinityConfig.ApiUrl .. "?t=" .. tostring(tick()))
+    end)
+    if not ok or not raw or raw == "" or raw == "null" then return nil end
+    local decodeOk, data = pcall(function()
+        return HttpService:JSONDecode(raw)
+    end)
+    return (decodeOk and type(data) == "table") and data or nil
+end
+
+-- Start background polling loop
+task.spawn(function()
+    while task.wait(InfinityConfig.PollInterval) do
+        local announcement = FetchLatestAnnouncement()
+        if announcement and announcement.active and announcement.id ~= lastSeenAnnouncementId then
+            lastSeenAnnouncementId = announcement.id
+            if InfinityConfig.DebugMode then
+                print("[Infinity Hub] New Announcement: " .. tostring(announcement.title))
+            end
+            -- Trigger popup in GUI:
+            -- ShowAnnouncementNotification(announcement)
+        end
+    end
+end)</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="hub-footer">
+      <p>Infinity Hub Local Announcement System &bull; Built for Local Development &amp; Seamless Cloud Deployment</p>
+    </footer>
+  </div>
+
+  <!-- Admin Password Modal -->
+  <div id="authModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div>
+          <h3>Admin Authorization</h3>
+          <p class="panel-sub">Enter the administrator password from your <code>.env</code></p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="adminPasswordInput" class="form-label">Admin Password</label>
+          <input 
+            type="password" 
+            id="adminPasswordInput" 
+            class="form-input" 
+            placeholder="Enter ADMIN_PASSWORD" 
+            autocomplete="current-password"
+            onkeydown="if(event.key==='Enter') saveAdminPassword()"
+          >
+          <div id="authErrorMsg" class="auth-error-msg"></div>
+        </div>
+        <div class="auth-hint">
+          <span>Default local password is: <code>infinityadmin123</code> (configurable in <code>.env</code>)</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeAuthModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveAdminPassword()">Authorize Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
