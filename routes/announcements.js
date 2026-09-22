@@ -5,7 +5,9 @@ const { touchClient } = require('./stats');
 
 // Middleware: Verify Admin Password for write operations
 function requireAdmin(req, res, next) {
-  const adminPassword = process.env.ADMIN_PASSWORD || 'InfinityX9!';
+  const adminPassword = (process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD !== 'infinityadmin123')
+    ? process.env.ADMIN_PASSWORD
+    : 'InfinityX9!';
 
   // If no password is set in .env, log a warning but allow for zero-config local dev
   if (!adminPassword || adminPassword === 'CHANGE_THIS_PASSWORD') {
