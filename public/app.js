@@ -314,14 +314,94 @@ function getSavedAdminPassword() {
 
 function checkAuthStatus() {
   const pass = getSavedAdminPassword();
+  const loginGatewayView = document.getElementById('loginGatewayView');
+  const adminDashboardView = document.getElementById('adminDashboardView');
+
   if (pass) {
-    authStatusBadge.className = 'auth-badge auth-unlocked';
-    authStatusText.textContent = 'Admin Authorized';
-    logoutBtn.style.display = 'inline-flex';
+    if (loginGatewayView) loginGatewayView.style.display = 'none';
+    if (adminDashboardView) adminDashboardView.style.display = 'block';
+
+    if (authStatusBadge) {
+      authStatusBadge.className = 'auth-badge auth-unlocked';
+      authStatusText.textContent = 'Admin Authorized';
+    }
+    if (logoutBtn) logoutBtn.style.display = 'inline-flex';
   } else {
-    authStatusBadge.className = 'auth-badge auth-locked';
-    authStatusText.textContent = 'Admin Key Required';
-    logoutBtn.style.display = 'none';
+    if (loginGatewayView) loginGatewayView.style.display = 'flex';
+    if (adminDashboardView) adminDashboardView.style.display = 'none';
+
+    if (authStatusBadge) {
+      authStatusBadge.className = 'auth-badge auth-locked';
+      authStatusText.textContent = 'Admin Key Required';
+    }
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    
+    const input = document.getElementById('gatewayPasswordInput');
+    if (input) setTimeout(() => input.focus(), 150);
+  }
+}
+
+async function handleGatewayLogin(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('gatewayPasswordInput');
+  const errorEl = document.getElementById('gatewayErrorMsg');
+  const submitBtn = document.getElementById('gatewaySubmitBtn');
+  const pass = input ? input.value.trim() : '';
+
+  if (!pass) {
+    if (errorEl) {
+      errorEl.textContent = 'Please enter your administrator password.';
+      errorEl.style.display = 'block';
+    }
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span>VERIFYING...</span>`;
+  }
+
+  try {
+    const res = await fetch('/api/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      if (errorEl) {
+        errorEl.textContent = data.error || 'Incorrect admin password. Please try again.';
+        errorEl.style.display = 'block';
+      }
+      if (input) {
+        input.select();
+        input.focus();
+      }
+      return;
+    }
+
+    sessionStorage.setItem('infinity_admin_password', pass);
+    if (errorEl) errorEl.style.display = 'none';
+
+    checkAuthStatus();
+    fetchTelemetryStats();
+    loadAnnouncements();
+    showToast('Welcome to Infinity Hub Admin', 'success');
+  } catch (err) {
+    if (errorEl) {
+      errorEl.textContent = 'Unable to connect to backend server.';
+      errorEl.style.display = 'block';
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<span>ENTER ADMIN CONSOLE</span>
+        <svg class="btn-arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>`;
+    }
   }
 }
 
@@ -373,6 +453,11 @@ function logoutAdmin() {
   sessionStorage.removeItem('infinity_admin_password');
   checkAuthStatus();
   showToast('Logged out of admin session.', 'info');
+  const input = document.getElementById('gatewayPasswordInput');
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 150);
+  }
 }
 
 function getAuthHeaders() {
