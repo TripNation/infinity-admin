@@ -3,6 +3,7 @@ services:
     name: infinity-admin
     runtime: node
     plan: free
+    autoDeploy: true
     buildCommand: npm install
     startCommand: npm start
     envVars:
