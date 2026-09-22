@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const storage = require('../utils/storage');
+const { touchClient } = require('./stats');
 
 // Middleware: Verify Admin Password for write operations
 function requireAdmin(req, res, next) {
@@ -37,6 +38,10 @@ function requireAdmin(req, res, next) {
  */
 router.get('/latest', (req, res) => {
   try {
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+    const clientId = req.query.cid || req.headers['x-client-id'] || ip;
+    touchClient(clientId);
+
     const list = storage.getAnnouncements();
     // Filter active announcements, sorted by createdAt descending or highest ID
     const activeList = list.filter(a => a.active === true);

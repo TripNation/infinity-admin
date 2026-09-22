@@ -37,43 +37,46 @@
       </div>
     </header>
 
-    <!-- Top Status Section -->
-    <section class="status-grid">
-      <div class="status-card">
-        <div class="status-card-header">
-          <span class="status-label">SERVER STATUS</span>
-          <span id="apiStatusPill" class="pill pill-green">
-            <span class="pill-dot pulse"></span>
-            <span id="apiStatusText">Checking...</span>
-          </span>
+    <!-- Live Script Telemetry Section (Serenity Hub Style) -->
+    <section class="telemetry-panel">
+      <div class="telemetry-header">
+        <div class="telemetry-title-wrap">
+          <h2 class="telemetry-brand">INFINITY HUB</h2>
+          <p class="telemetry-sub">Active accounts and script executions</p>
         </div>
-        <div class="status-value-row">
-          <div class="status-metric">
-            <span class="metric-title">API</span>
-            <span id="serverModeText" class="metric-val">Online</span>
-          </div>
-          <div class="status-metric">
-            <span class="metric-title">Latest Announcement</span>
-            <span id="latestIdBadge" class="metric-val text-accent">ID --</span>
-          </div>
-          <div class="status-metric">
-            <span class="metric-title">Clients</span>
-            <span id="clientModeBadge" class="metric-val">Local development mode</span>
-          </div>
+        <button type="button" class="btn-telemetry-refresh" onclick="fetchTelemetryStats(true)">
+          Refresh
+        </button>
+      </div>
+
+      <div class="telemetry-grid">
+        <!-- Active now Card -->
+        <div class="telemetry-card card-active-now">
+          <div class="telemetry-card-label">Active now</div>
+          <div class="telemetry-card-value text-amber" id="statActiveNow">1</div>
         </div>
-        <div class="status-card-footer">
-          <div class="api-url-box">
-            <span class="url-label">ENDPOINT:</span>
-            <code id="apiUrlDisplay">http://localhost:3000/api/announcements/latest</code>
-          </div>
-          <button id="copyUrlBtn" class="btn-copy" onclick="copyApiUrl()">
-            <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            <span>COPY API URL</span>
-          </button>
+
+        <!-- Executions today Card -->
+        <div class="telemetry-card">
+          <div class="telemetry-card-label">Executions today</div>
+          <div class="telemetry-card-value" id="statExecutionsToday">--</div>
         </div>
+
+        <!-- This month Card -->
+        <div class="telemetry-card">
+          <div class="telemetry-card-label">This month</div>
+          <div class="telemetry-card-value" id="statThisMonth">--</div>
+        </div>
+
+        <!-- All-time executions Card -->
+        <div class="telemetry-card">
+          <div class="telemetry-card-label">All-time executions</div>
+          <div class="telemetry-card-value" id="statAllTime">--</div>
+        </div>
+      </div>
+
+      <div class="telemetry-footer">
+        <span id="telemetryUpdatedText">Updated: --</span>
       </div>
     </section>
 

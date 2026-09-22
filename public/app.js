@@ -52,6 +52,13 @@ const authModal = document.getElementById('authModal');
 const adminPasswordInput = document.getElementById('adminPasswordInput');
 const authErrorMsg = document.getElementById('authErrorMsg');
 
+// Telemetry Elements (Serenity Hub Style)
+const statActiveNow = document.getElementById('statActiveNow');
+const statExecutionsToday = document.getElementById('statExecutionsToday');
+const statThisMonth = document.getElementById('statThisMonth');
+const statAllTime = document.getElementById('statAllTime');
+const telemetryUpdatedText = document.getElementById('telemetryUpdatedText');
+
 // History Table
 const historyTableBody = document.getElementById('historyTableBody');
 
@@ -65,10 +72,44 @@ document.addEventListener('DOMContentLoaded', () => {
   updateLivePreview();
   fetchServerStatus();
   loadAnnouncements();
+  fetchTelemetryStats();
 
-  // Periodic status poll every 10 seconds
-  setInterval(fetchServerStatus, 10000);
+  // Periodic telemetry poll every 5 seconds
+  setInterval(fetchTelemetryStats, 5000);
+
+  // Periodic server status poll every 15 seconds
+  setInterval(fetchServerStatus, 15000);
 });
+
+function formatNumber(num) {
+  if (num === null || num === undefined || isNaN(num)) return '0';
+  return Number(num).toLocaleString('en-US');
+}
+
+async function fetchTelemetryStats(manual = false) {
+  try {
+    const res = await fetch('/api/stats');
+    if (!res.ok) throw new Error('Stats request failed');
+    const data = await res.json();
+
+    if (statActiveNow) statActiveNow.textContent = formatNumber(data.activeNow || 1);
+    if (statExecutionsToday) statExecutionsToday.textContent = formatNumber(data.executionsToday || 0);
+    if (statThisMonth) statThisMonth.textContent = formatNumber(data.thisMonth || 0);
+    if (statAllTime) statAllTime.textContent = formatNumber(data.allTime || 0);
+
+    if (telemetryUpdatedText) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+      telemetryUpdatedText.textContent = `Updated: ${timeStr}`;
+    }
+
+    if (manual) {
+      showToast('Telemetry statistics refreshed.', 'info');
+    }
+  } catch (err) {
+    console.error('Error fetching telemetry stats:', err);
+  }
+}
 
 function setupEventListeners() {
   // Real-time preview triggers
