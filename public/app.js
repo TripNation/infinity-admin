@@ -352,14 +352,19 @@ async function loadAnnouncements() {
     if (!res.ok) throw new Error('Failed to load announcements');
     const data = await res.json();
     allAnnouncements = data;
-    renderHistoryTable(data);
+    if (historyTableBody) {
+      renderHistoryTable(data);
+    }
   } catch (err) {
     console.error('Error loading history:', err);
-    historyTableBody.innerHTML = `<tr><td colspan="8" class="empty-state">Failed to load announcement history.</td></tr>`;
+    if (historyTableBody) {
+      historyTableBody.innerHTML = `<tr><td colspan="8" class="empty-state">Failed to load announcement history.</td></tr>`;
+    }
   }
 }
 
 function renderHistoryTable(list) {
+  if (!historyTableBody) return;
   if (!list || list.length === 0) {
     historyTableBody.innerHTML = `<tr><td colspan="8" class="empty-state">No announcements created yet. Send your first announcement above!</td></tr>`;
     return;
