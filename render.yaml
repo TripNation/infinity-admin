@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: infinity-admin
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ADMIN_PASSWORD
+        value: infinityadmin123
+      - key: PUBLIC_BASE_URL
+        value: https://www.infinityhub.space
